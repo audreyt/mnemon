@@ -2,16 +2,20 @@
   <img src="../logo/logo.svg" width="160" height="160" alt="Mnemon Logo" />
 </p>
 
-# Mnemon
+<h1 align="center">Mnemon</h1>
 
-[English](../../README.md) | **中文**
+<p align="center"><a href="../../README.md">English</a> · <strong>中文</strong></p>
 
-**LLM 智能体的持久记忆系统** — LLM 监督式、钩子集成、四图架构。
+<p align="center">
+  <a href="https://www.npmjs.com/package/@mnemon-dev/mnemon"><img alt="npm 版本" src="https://img.shields.io/npm/v/@mnemon-dev/mnemon?label=npm" /></a>
+  <a href="https://github.com/mnemon-dev/mnemon/releases/latest"><img alt="GitHub 发布版本" src="https://img.shields.io/github/v/release/mnemon-dev/mnemon" /></a>
+  <a href="https://github.com/mnemon-dev/mnemon/stargazers"><img alt="GitHub 收藏数" src="https://img.shields.io/github/stars/mnemon-dev/mnemon?label=stars" /></a>
+  <a href="https://go.dev/"><img alt="Go 1.24+" src="https://img.shields.io/badge/Go-1.24%2B-00ADD8?logo=go&amp;logoColor=white" /></a>
+  <a href="https://github.com/mnemon-dev/mnemon/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/mnemon-dev/mnemon/actions/workflows/ci.yml/badge.svg" /></a>
+  <a href="../../LICENSE"><img alt="许可证：Apache-2.0" src="https://img.shields.io/badge/License-Apache--2.0-blue.svg" /></a>
+</p>
 
-[![Go 1.24+](https://img.shields.io/badge/Go-1.24%2B-00ADD8?logo=go&logoColor=white)](https://go.dev/)
-[![CI](https://github.com/mnemon-dev/mnemon/actions/workflows/ci.yml/badge.svg)](https://github.com/mnemon-dev/mnemon/actions/workflows/ci.yml)
-[![Go Report Card](https://goreportcard.com/badge/github.com/mnemon-dev/mnemon)](https://goreportcard.com/report/github.com/mnemon-dev/mnemon)
-[![License: Apache-2.0](https://img.shields.io/badge/License-Apache--2.0-blue.svg)](../../LICENSE)
+<p align="center"><strong>LLM 智能体的持久记忆系统</strong> — LLM 监督式、钩子集成、四图架构。</p>
 
 ---
 
@@ -59,17 +63,31 @@ Mnemon 同时填补了协议栈中的空白。MCP 标准化了 LLM 如何发现�
 
 ### 安装
 
-**Homebrew Cask**（macOS）：
+**npm**（推荐；macOS / Linux / Windows，需要 Node.js 22+）：
+
+```bash
+npm install --global @mnemon-dev/mnemon
+```
+
+之后可随时升级 npm 管理的 CLI：
+
+```bash
+mnemon update
+```
+
+npm 包会按宿主操作系统和 CPU 安装对应的原生 Go 可执行文件。Mnemon 引擎
+仍然是单一原生二进制；Node.js 只用于 npm 启动器和包管理。
+
+**其他安装方式**：
 
 ```bash
 brew install --cask mnemon-dev/tap/mnemon
-```
-
-**Go install**（macOS / Linux / Windows）：
-
-```bash
 go install github.com/mnemon-dev/mnemon@latest
 ```
+
+Homebrew、`go install`、源码构建及其他 Node 包管理器安装的版本，必须继续使用
+各自原来的安装方式。迁移时请先执行一次 npm 安装命令，并确保 npm 全局 bin 目录
+在 `PATH` 中排在旧可执行文件之前；此后的 `mnemon update` 将由 npm 管理。
 
 Windows 支持核心 Memory 命令。Agency 的本地权威边界完成原生 Windows
 安全实现前，在 Windows 上保持不可用。
@@ -313,7 +331,7 @@ store 可见。**Remind** 触发 recall 判断。**Nudge** 触发 writeback 判�
 - **意图感知召回** — 图遍历 + 可选向量搜索（RRF 融合），所有查询默认启用
 - **内置去重** — `remember` 自动检测重复和冲突；跳过或自动替换
 - **保留度生命周期** — 重要性衰减、访问计数提升、免疫规则、垃圾回收
-- **可选嵌入向量** — 本地 [Ollama](https://ollama.ai) 集成，支持混合向量+关键词搜索
+- **可选嵌入向量** — 可使用本地 [Ollama](https://ollama.ai) 或 OpenAI 兼容服务器，支持混合向量+关键词搜索
 
 ## 愿景
 
@@ -396,8 +414,27 @@ Sub-agent 委派是可选执行策略。当 runtime 支持时，主 agent 可以
 |---------|-------|------|
 | `MNEMON_DATA_DIR` | `~/.mnemon` | 基础数据目录 |
 | `MNEMON_STORE` | *（active 文件或 `default`）* | 命名记忆体，用于数据隔离 |
-| `MNEMON_EMBED_ENDPOINT` | `http://localhost:11434` | Ollama API 端点 |
+| `MNEMON_MAX_INSIGHTS` | `1000` | 活跃 insight 上限；设为 `0` 可关闭自动清理 |
+| `MNEMON_AUTO_PRUNE_MIN_AGE` | `24h` | 自动清理前的保护期；支持 `24h`、`7d` 或 `0` |
+| `MNEMON_EMBED_ENDPOINT` | `http://localhost:11434` | 嵌入 API 端点 |
 | `MNEMON_EMBED_MODEL` | `nomic-embed-text` | 嵌入模型名称 |
+| `MNEMON_EMBED_PROTOCOL` | *（自动探测）* | `ollama` 或 `openai`；端点以 `/v1` 结尾时自动切换 |
+| `MNEMON_EMBED_API_KEY` | *（无）* | OpenAI 兼容服务器（oMLX、vLLM 等）的 Bearer 令牌 |
+| `MNEMON_EMBED_DIMENSIONS` | *（原生维度）* | 可选的 Matryoshka 维度截断 |
+
+每次自动删除均为软删除，以 `prune` 操作记录到 oplog，并通过触发命令的
+`auto_pruned_ids` 字段返回具体 ID。
+
+嵌入客户端默认使用 Ollama API；当端点以 `/v1` 结尾（或显式设置
+`MNEMON_EMBED_PROTOCOL=openai`）时改用 OpenAI 兼容的 embeddings API。例如，
+可通过以下配置对接 [oMLX](https://omlx.dev) 等本地服务器：
+
+```bash
+export MNEMON_EMBED_ENDPOINT=http://127.0.0.1:18000/v1
+export MNEMON_EMBED_MODEL=bge-m3-mlx-8bit
+export MNEMON_EMBED_API_KEY=sk-... # 无需认证的本地服务器可省略
+mnemon embed --status
+```
 
 也可在命令上使用 `--data-dir` 或 `--store` 标志覆盖。
 
@@ -415,7 +452,7 @@ make help           # 显示所有目标
 
 **依赖**：Go 1.24+、`modernc.org/sqlite`、`spf13/cobra`、`google/uuid`
 
-**可选**：[Ollama](https://ollama.ai) + `nomic-embed-text` 嵌入支持
+**可选**：[Ollama](https://ollama.ai) 或 OpenAI 兼容的嵌入服务器
 
 ## 文档
 
@@ -439,3 +476,6 @@ Mnemon 取用了一篇论文的范式和另一篇论文的方法论，并基于�
 Copyright 2026 Grivn and Mnemon contributors.
 
 [Apache-2.0](../../LICENSE)
+
+`LICENSE` 末尾带方括号的版权示例属于 Apache 2.0 标准许可证的应用附录；
+本节所列内容才是本项目的实际版权声明。

@@ -12,9 +12,34 @@
 |---|---|---|
 | `--store <name>` | (自动) | 命名记忆体（覆盖 `MNEMON_STORE` 和 active 文件） |
 | `--data-dir <path>` | `~/.mnemon` | 基础数据目录 |
-| `--embed-model <name>` | `nomic-embed-text` | Ollama 嵌入模型（覆盖 `MNEMON_EMBED_MODEL`） |
-| `--readonly` | `false` | 以只读模式打开 Memory 数据库，不创建 WAL 文件 |
+| `--embed-model <name>` | `nomic-embed-text` | 嵌入模型（覆盖 `MNEMON_EMBED_MODEL`） |
+| `--readonly` | `false` | 打开不可变的 Memory 数据库快照；拒绝写命令且不创建 WAL 文件 |
 | `--version` | | 打印版本并退出 |
+
+`--readonly` 适用于只读挂载上的静态数据库快照。它会拒绝修改 Memory
+数据的命令，并禁用 recall 计数器和 oplog 等附带写入。请勿用它跟随由另一个
+进程持续修改的数据库；不可变快照会有意忽略并发 WAL 更新。
+`--data-dir` 接受文件系统路径，包括 Windows 盘符路径和相对于当前目录的路径。
+Mnemon 会在内部解析并编码只读 SQLite 文件 URI，无需手动添加 `file:` 前缀。
+
+---
+
+## CLI 升级
+
+通过推荐的 npm 方式安装后，可以升级到 npm `latest` 指向的版本：
+
+```bash
+mnemon update
+```
+
+在调用 npm 前，npm 启动器会确认当前软件包确实属于同一个全局 npm
+prefix。若 `mnemon` 来自 Homebrew、`go install`、源码构建、其他 Node 包管理器
+或另一个 npm prefix，命令会以 fail-closed 方式退出，避免静默产生第二份安装。
+首次迁移请执行 `npm install --global @mnemon-dev/mnemon@latest`，并确保 npm
+全局 bin 目录中的 `mnemon` 在 `PATH` 中优先。
+
+升级只替换 CLI 包，不会修改 Memory 数据，也不会静默改写已安装的宿主集成。
+当某个版本的 release notes 明确要求刷新集成时，再重新运行 `mnemon setup`。
 
 ---
 
@@ -79,6 +104,10 @@ mnemon remember "原始笔记" --no-diff
 # Recall — 意图感知的图增强检索（默认输出为紧凑格式）
 mnemon recall "vector database" --limit 10
 
+# 仅发现候选 — 返回短摘要，再按 ID 获取完整内容
+mnemon recall "vector database" --brief --excerpt-chars 160
+mnemon show <id>
+
 # 输出完整召回结果（signals、meta、时间戳）
 mnemon recall "vector database" --verbose
 
@@ -93,6 +122,7 @@ mnemon recall "auth" --basic
 
 # Search — 基于 token 评分的关键词搜索
 mnemon search "authentication" --limit 10
+mnemon search "authentication" --brief --excerpt-chars 160
 
 # Import — 批量导入 Memory draft（格式与 LLM prompt 见 docs/IMPORT.md）
 mnemon import memory_draft.json
@@ -124,12 +154,18 @@ mnemon forget <id>
 | `--cat` | | 按分类过滤 |
 | `--source` | | 按来源过滤 |
 | `--basic` | `false` | 使用简单 SQL LIKE 匹配代替智能召回 |
+| `--brief` | `false` | 输出仅含短摘要的紧凑 JSON；使用 `mnemon show <id>` 获取选中项全文 |
+| `--excerpt-chars` | `240` | 每条 `--brief` 摘要最多包含的 Unicode 字符数 |
 | `--verbose` | `false` | 输出完整召回响应（signals、meta、时间戳） |
 
 默认紧凑输出针对 LLM/agent 消费优化，包含 `id`、`content`、`category`、
 `importance`、`intent`、`matched_via`、`confidence` 和 `score`。使用
 `--verbose` 可恢复包含 signals、遍历元数据和时间戳的完整响应。置信度标签只在
 紧凑模式输出；完整响应保留原始分数，供调用方自行设置阈值。
+对于长记忆，`--brief` 提供更小的发现投影：折叠空白、限制每条摘要长度、输出
+无缩进 JSON，并只附带一次 `detail_command` 提示。`search` 同样支持这两个标志。
+JSON 继续作为机器可读交换格式，因此既不破坏现有解析器，也无需绑定尚在演进的
+序列化草案。
 
 **Import 标志：**
 
@@ -247,34 +283,54 @@ open graph.html
 |---|---|---|
 | `MNEMON_DATA_DIR` | `~/.mnemon` | 基础数据目录 |
 | `MNEMON_STORE` | `default` | 活跃命名记忆体 |
-| `MNEMON_EMBED_ENDPOINT` | `http://localhost:11434` | Ollama API 端点 |
-| `MNEMON_EMBED_MODEL` | `nomic-embed-text` | Ollama 嵌入模型 |
+| `MNEMON_EMBED_ENDPOINT` | `http://localhost:11434` | 嵌入 API 端点 |
+| `MNEMON_EMBED_MODEL` | `nomic-embed-text` | 嵌入模型 |
+| `MNEMON_EMBED_PROTOCOL` | （自动探测） | `ollama` 或 `openai`；以 `/v1` 结尾的端点自动选择 `openai` |
+| `MNEMON_EMBED_API_KEY` | （无） | OpenAI 兼容服务器的 Bearer 令牌 |
 | `MNEMON_EMBED_DIMENSIONS` | (原生维度) | 嵌入向量维度；可设置截断值（例如 Matryoshka 模型使用 `256`） |
 | `MNEMON_MAX_INSIGHTS` | `1000` | 触发自动清理的活跃洞察数量上限；设为 `0` 可关闭自动清理 |
+| `MNEMON_AUTO_PRUNE_MIN_AGE` | `24h` | 可被自动清理前的最短存活时间；支持 `24h`、整数天 `7d`，设为 `0` 可关闭保护期 |
+
+如果所有候选 insight 都仍处于保护期内，活跃数量可暂时高于上限。保护期按本地
+实际入库时间计算，因此刚导入的历史记忆也会受到保护。每次删除均为软删除，与
+一条 `prune` oplog 记录在同一事务中提交，并通过触发命令的
+`auto_pruned_ids` 返回具体 ID，同时保留原有的 `auto_pruned` 计数。
 
 ---
 
 ## 嵌入向量支持（可选）
 
-Mnemon 无需 Ollama 即可完整运行 — 所有核心功能（remember、recall、link、图遍历）开箱即用。添加 Ollama 可通过向量相似度增强召回精度，但从不是必需的。
+Mnemon 无需嵌入服务即可完整运行 — 所有核心功能（remember、recall、link、图遍历）开箱即用。配置 Ollama 或 OpenAI 兼容服务器可通过向量相似度增强召回精度，但从不是必需的。
 
 ### 有无嵌入的对比
 
-| 能力 | 无 Ollama | 有 Ollama |
+| 能力 | 无嵌入向量 | 有嵌入向量 |
 |---|---|---|
 | **召回锚点** | 关键词 + 时间 | 关键词 + 向量 + 时间（RRF 混合） |
 | **语义边** | Token 重叠（较粗） | 余弦相似度 ≥ 0.50（精确） |
 | **遍历评分** | 纯结构分 | 结构 + 语义 |
 | **重排序权重** | 关键词 45%、实体 25%、图 30% | 关键词 30%、实体 15%、相似度 35%、图 20% |
 
-Ollama 不可用时，重排序系统自动将相似度权重重新分配给关键词和图信号 — 无需配置，无降级模式标志。系统在运行时以 2 秒超时检测 Ollama 可用性。
+配置的嵌入服务不可用时，重排序系统会自动将相似度权重重新分配给关键词和图信号 — 无需额外配置或降级模式标志。Mnemon 在运行时以 2 秒超时检测服务可用性。
 
 ### 安装
+
+Ollama 仍是默认服务：
 
 ```bash
 brew install ollama              # 或参见 https://ollama.ai
 ollama pull nomic-embed-text     # 下载嵌入模型
 ```
+
+使用 OpenAI 兼容服务器时，将端点指向其 `/v1` 基础 URL，并选择服务器上的嵌入模型。无需认证的本地服务器可省略 API key：
+
+```bash
+export MNEMON_EMBED_ENDPOINT=http://127.0.0.1:18000/v1
+export MNEMON_EMBED_MODEL=bge-m3-mlx-8bit
+export MNEMON_EMBED_API_KEY=sk-... # 无需认证的本地服务器可省略
+```
+
+仅当兼容端点不以 `/v1` 结尾时，才需要显式设置 `MNEMON_EMBED_PROTOCOL=openai`。
 
 验证：
 
@@ -287,14 +343,19 @@ mnemon embed --status
   "total_insights": 87,
   "embedded": 87,
   "coverage": "100%",
+  "embedding_available": true,
   "ollama_available": true,
+  "protocol": "ollama",
   "model": "nomic-embed-text"
 }
 ```
 
+为兼容现有脚本，`ollama_available` 字段会继续保留；新集成应使用
+`embedding_available` 和 `protocol`。
+
 ### 回填已有洞察
 
-如果在使用 mnemon 之后才安装 Ollama，已有洞察不会有嵌入向量。一条命令即可回填：
+如果在使用 mnemon 之后才配置嵌入服务，已有洞察不会有嵌入向量。一条命令即可回填：
 
 ```bash
 mnemon embed --all
@@ -321,8 +382,8 @@ mnemon embed --all
         retrieve.                          │  │ causal     │  │
                                            │  │ semantic   │  │
       ┌──────────────────┐                 │  ├────────────┤  │
-      │  Ollama          │  (optional)     │  │ Embeddings │  │
-      │  nomic-embed-text│ ◄───────────── │  └────────────┘  │
+      │ Embedding server │  (optional)     │  │ Embeddings │  │
+      │ configured model │ ◄───────────── │  └────────────┘  │
       └──────────────────┘                 └──────────────────┘
 ```
 
