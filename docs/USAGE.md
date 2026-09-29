@@ -266,7 +266,9 @@ mnemon gc --threshold 0.5 --limit 20
 
 # GC keep — boost an insight's retention
 mnemon gc --keep <id>
-mnemon gc --compact            # VACUUM the store; keeps cold recalls fast
+
+# GC compact — rewrite the store with VACUUM to keep cold recalls fast
+mnemon gc --compact
 ```
 
 ### Store Management

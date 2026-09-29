@@ -962,17 +962,17 @@ func TestGetSupersededIDs_ScopesToRequestedIDs(t *testing.T) {
 		t.Errorf("lookup answered about ids the caller never asked for: %v", got)
 	}
 
-	many := make([]string, 0, 1002)
-	for i := 0; i <= 1000; i++ {
+	many := make([]string, 0, supersededLookupChunk+2)
+	for i := 0; i <= supersededLookupChunk; i++ {
 		many = append(many, fmt.Sprintf("absent-%d", i))
 	}
 	many = append(many, "sup-other-stale")
 	got, err = db.GetSupersededIDs(many)
 	if err != nil {
-		t.Fatalf("large lookup: %v", err)
+		t.Fatalf("chunked lookup: %v", err)
 	}
 	if !got["sup-other-stale"] {
-		t.Error("a match among many candidates was dropped")
+		t.Error("a match past the first chunk was dropped")
 	}
 
 	empty, err := db.GetSupersededIDs(nil)
