@@ -2,6 +2,7 @@ package store
 
 import (
 	"database/sql"
+	"errors"
 	"fmt"
 	"math"
 	"net/url"
@@ -12,7 +13,8 @@ import (
 	"strings"
 
 	"github.com/mnemon-dev/mnemon/internal/memory/embed"
-	_ "modernc.org/sqlite"
+	"modernc.org/sqlite"
+	sqlite3 "modernc.org/sqlite/lib"
 )
 
 // DefaultStoreName is the fallback store when none is specified.
@@ -229,6 +231,7 @@ func OpenReadOnly(dataDir string) (*DB, error) {
 	query.Set("mode", "ro")
 	query.Set("immutable", "1")
 	query.Add("_pragma", "foreign_keys(1)")
+	query.Add("_pragma", "mmap_size(268435456)")
 	dsn.RawQuery = query.Encode()
 
 	conn, err := sql.Open("sqlite", dsn.String())
@@ -423,12 +426,13 @@ CREATE INDEX IF NOT EXISTS idx_oplog_created ON oplog(created_at);
 // above recreate them, hence this runs last on every open.
 //
 // The partial index holds only 'supersedes' edges, so recall's superseded
-// check probes a few hundred KB instead of the whole target index.
+// check reads a few hundred KB instead of probing the whole target index.
 func (db *DB) migrateEdgeRecallIndexes() error {
 	for _, stmt := range []string{
 		`CREATE INDEX IF NOT EXISTS idx_edges_source_cover ON edges(source_id, target_id, edge_type, weight)`,
 		`CREATE INDEX IF NOT EXISTS idx_edges_target_cover ON edges(target_id, source_id, edge_type, weight)`,
-		`CREATE INDEX IF NOT EXISTS idx_edges_supersedes_target ON edges(target_id) WHERE edge_type = 'supersedes'`,
+		`CREATE INDEX IF NOT EXISTS idx_edges_supersedes ON edges(target_id, source_id) WHERE edge_type = 'supersedes'`,
+		`DROP INDEX IF EXISTS idx_edges_supersedes_target`, // fork-only predecessor of idx_edges_supersedes
 		`DROP INDEX IF EXISTS idx_edges_source`,
 		`DROP INDEX IF EXISTS idx_edges_target`,
 	} {
@@ -653,6 +657,10 @@ func (db *DB) migrateAddSupersedesEdgeType() error {
 	}
 	if probeErr == nil {
 		return nil // already migrated
+	}
+	var sqliteErr *sqlite.Error
+	if !errors.As(probeErr, &sqliteErr) || sqliteErr.Code() != sqlite3.SQLITE_CONSTRAINT_CHECK {
+		return fmt.Errorf("probe supersedes edge type: %w", probeErr)
 	}
 
 	tx, err := db.conn.Begin()

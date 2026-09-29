@@ -716,6 +716,75 @@ func TestMigrateRemoveNarrativeEdges_KeepsRealEdgesNamedLikeTheSentinel(t *testi
 	}
 }
 
+func TestMigrateStoredAtBackfillsLegacyInsights(t *testing.T) {
+	dir := t.TempDir()
+	dbPath := filepath.Join(dir, "mnemon.db")
+	legacy, err := sql.Open("sqlite", dbPath)
+	if err != nil {
+		t.Fatalf("open legacy database: %v", err)
+	}
+	if _, err := legacy.Exec(`
+		CREATE TABLE insights (
+			id TEXT PRIMARY KEY,
+			content TEXT NOT NULL,
+			category TEXT DEFAULT 'general',
+			importance INTEGER DEFAULT 3,
+			tags TEXT DEFAULT '[]',
+			entities TEXT DEFAULT '[]',
+			source TEXT DEFAULT 'user',
+			access_count INTEGER DEFAULT 0,
+			created_at TEXT NOT NULL,
+			updated_at TEXT NOT NULL,
+			deleted_at TEXT
+		);
+		INSERT INTO insights
+			(id, content, created_at, updated_at)
+		VALUES
+			('legacy-row', 'pre-migration memory', '2025-01-02T03:04:05Z', '2025-01-02T03:04:05Z')
+	`); err != nil {
+		legacy.Close()
+		t.Fatalf("create legacy schema: %v", err)
+	}
+	if err := legacy.Close(); err != nil {
+		t.Fatalf("close legacy database: %v", err)
+	}
+
+	migrated, err := Open(dir)
+	if err != nil {
+		t.Fatalf("migrate legacy database: %v", err)
+	}
+	defer migrated.Close()
+
+	var storedAt string
+	if err := migrated.conn.QueryRow(
+		`SELECT stored_at FROM insights WHERE id = 'legacy-row'`).Scan(&storedAt); err != nil {
+		t.Fatalf("read stored_at: %v", err)
+	}
+	if storedAt != "2025-01-02T03:04:05Z" {
+		t.Fatalf("stored_at = %q, want legacy created_at", storedAt)
+	}
+
+	// A sync tool built against the old schema can continue omitting stored_at;
+	// the migrated store must still protect that incoming row as newborn.
+	if _, err := migrated.conn.Exec(`
+		INSERT INTO insights (id, content, created_at, updated_at)
+		VALUES ('external-row', 'legacy writer payload', '2020-01-01T00:00:00Z', '2020-01-01T00:00:00Z')
+	`); err != nil {
+		t.Fatalf("legacy-style insert after migration: %v", err)
+	}
+	if err := migrated.conn.QueryRow(
+		`SELECT stored_at FROM insights WHERE id = 'external-row'`).Scan(&storedAt); err != nil {
+		t.Fatalf("read external stored_at: %v", err)
+	}
+	physicalTime, err := time.Parse(time.RFC3339, storedAt)
+	if err != nil {
+		t.Fatalf("parse external stored_at %q: %v", storedAt, err)
+	}
+	if physicalTime.Before(time.Now().UTC().Add(-time.Minute)) {
+		t.Fatalf("legacy-style insert inherited historical event time: %s", physicalTime)
+	}
+}
+
 // The supersedes migration probes by inserting a sentinel edge whose endpoints
 // do not exist. If that probe runs with foreign key enforcement on it fails on
 // the foreign key rather than the CHECK, reports "not yet migrated" every
@@ -912,75 +981,6 @@ func TestGetSupersededIDs_ScopesToRequestedIDs(t *testing.T) {
 	}
 	if len(empty) != 0 {
 		t.Errorf("no ids asked about, got %v", empty)
-	}
-}
-
-func TestMigrateStoredAtBackfillsLegacyInsights(t *testing.T) {
-	dir := t.TempDir()
-	dbPath := filepath.Join(dir, "mnemon.db")
-	legacy, err := sql.Open("sqlite", dbPath)
-	if err != nil {
-		t.Fatalf("open legacy database: %v", err)
-	}
-	if _, err := legacy.Exec(`
-		CREATE TABLE insights (
-			id TEXT PRIMARY KEY,
-			content TEXT NOT NULL,
-			category TEXT DEFAULT 'general',
-			importance INTEGER DEFAULT 3,
-			tags TEXT DEFAULT '[]',
-			entities TEXT DEFAULT '[]',
-			source TEXT DEFAULT 'user',
-			access_count INTEGER DEFAULT 0,
-			created_at TEXT NOT NULL,
-			updated_at TEXT NOT NULL,
-			deleted_at TEXT
-		);
-		INSERT INTO insights
-			(id, content, created_at, updated_at)
-		VALUES
-			('legacy-row', 'pre-migration memory', '2025-01-02T03:04:05Z', '2025-01-02T03:04:05Z')
-	`); err != nil {
-		legacy.Close()
-		t.Fatalf("create legacy schema: %v", err)
-	}
-	if err := legacy.Close(); err != nil {
-		t.Fatalf("close legacy database: %v", err)
-	}
-
-	migrated, err := Open(dir)
-	if err != nil {
-		t.Fatalf("migrate legacy database: %v", err)
-	}
-	defer migrated.Close()
-
-	var storedAt string
-	if err := migrated.conn.QueryRow(
-		`SELECT stored_at FROM insights WHERE id = 'legacy-row'`).Scan(&storedAt); err != nil {
-		t.Fatalf("read stored_at: %v", err)
-	}
-	if storedAt != "2025-01-02T03:04:05Z" {
-		t.Fatalf("stored_at = %q, want legacy created_at", storedAt)
-	}
-
-	// A sync tool built against the old schema can continue omitting stored_at;
-	// the migrated store must still protect that incoming row as newborn.
-	if _, err := migrated.conn.Exec(`
-		INSERT INTO insights (id, content, created_at, updated_at)
-		VALUES ('external-row', 'legacy writer payload', '2020-01-01T00:00:00Z', '2020-01-01T00:00:00Z')
-	`); err != nil {
-		t.Fatalf("legacy-style insert after migration: %v", err)
-	}
-	if err := migrated.conn.QueryRow(
-		`SELECT stored_at FROM insights WHERE id = 'external-row'`).Scan(&storedAt); err != nil {
-		t.Fatalf("read external stored_at: %v", err)
-	}
-	physicalTime, err := time.Parse(time.RFC3339, storedAt)
-	if err != nil {
-		t.Fatalf("parse external stored_at %q: %v", storedAt, err)
-	}
-	if physicalTime.Before(time.Now().UTC().Add(-time.Minute)) {
-		t.Fatalf("legacy-style insert inherited historical event time: %s", physicalTime)
 	}
 }
 

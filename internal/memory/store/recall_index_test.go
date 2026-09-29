@@ -68,9 +68,10 @@ func TestRecallEdgeQueries_UseCoveringIndexes(t *testing.T) {
 	if strings.Count(plan, "COVERING INDEX") != 2 {
 		t.Fatalf("neighbour query not answered from covering indexes:\n%s", plan)
 	}
-	plan = queryPlan(t, db, `SELECT target_id FROM edges INDEXED BY idx_edges_supersedes_target WHERE edge_type = 'supersedes'`)
-	if !strings.Contains(plan, "idx_edges_supersedes_target") {
-		t.Fatalf("superseded lookup does not use the partial index:\n%s", plan)
+	plan = queryPlan(t, db, `SELECT target_id FROM edges INDEXED BY idx_edges_supersedes
+		 WHERE edge_type = 'supersedes' AND source_id != target_id`)
+	if !strings.Contains(plan, "COVERING INDEX idx_edges_supersedes") {
+		t.Fatalf("superseded lookup is not answered from the partial index alone:\n%s", plan)
 	}
 }
 
@@ -95,5 +96,39 @@ func TestKnownEntities_MatchesLoadKnownEntities(t *testing.T) {
 	}
 	if got := KnownEntities(all); !reflect.DeepEqual(got, want) {
 		t.Fatalf("KnownEntities = %v, want %v", got, want)
+	}
+}
+
+// A read-only open skips migrations, so a store last written by an older
+// build has no idx_edges_supersedes; the lookup must still answer.
+func TestGetSupersededIDs_FallsBackWithoutPartialIndex(t *testing.T) {
+	db := testDB(t)
+	for _, id := range []string{"fb-new", "fb-old", "fb-self"} {
+		if err := db.InsertInsight(makeInsight(id, id, 3)); err != nil {
+			t.Fatal(err)
+		}
+	}
+	now := time.Now().UTC()
+	for _, e := range []*model.Edge{
+		{SourceID: "fb-new", TargetID: "fb-old", EdgeType: model.EdgeSupersedes, Weight: 1},
+		{SourceID: "fb-self", TargetID: "fb-self", EdgeType: model.EdgeSupersedes, Weight: 1},
+	} {
+		if _, err := db.conn.Exec(`INSERT INTO edges (source_id, target_id, edge_type, weight, metadata, created_at) VALUES (?, ?, ?, ?, '{}', ?)`,
+			e.SourceID, e.TargetID, string(e.EdgeType), e.Weight, now.Format(time.RFC3339)); err != nil {
+			t.Fatal(err)
+		}
+	}
+	want := map[string]bool{"fb-old": true}
+	ids := []string{"fb-new", "fb-old", "fb-self"}
+	got, err := db.GetSupersededIDs(ids)
+	if err != nil || !reflect.DeepEqual(got, want) {
+		t.Fatalf("with index: %v, %v; want %v", got, err, want)
+	}
+	if _, err := db.conn.Exec(`DROP INDEX idx_edges_supersedes`); err != nil {
+		t.Fatal(err)
+	}
+	got, err = db.GetSupersededIDs(ids)
+	if err != nil || !reflect.DeepEqual(got, want) {
+		t.Fatalf("without index: %v, %v; want %v", got, err, want)
 	}
 }

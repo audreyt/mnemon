@@ -329,7 +329,7 @@ store 可见。**Remind** 触发 recall 判断。**Nudge** 触发 writeback 判�
 - **四图架构** — 时序、实体、因果、语义四种边，不仅仅是向量相似度
 - **意图原生协议** — 三个原语（`remember`、`link`、`recall`）映射到 LLM 的认知词汇而非数据库语法；结构化 JSON 输出，带信号透明度
 - **意图感知召回** — 图遍历 + 可选向量搜索（RRF 融合），所有查询默认启用
-- **内置去重** — `remember` 自动检测重复和冲突；跳过或自动替换
+- **内置去重** — `remember` 和 `import` 仅跳过内容完全相同的记忆，保留不同事实；相似度建议供复核参考
 - **保留度生命周期** — 重要性衰减、访问计数提升、免疫规则、垃圾回收
 - **可选嵌入向量** — 可使用本地 [Ollama](https://ollama.ai) 或 OpenAI 兼容服务器，支持混合向量+关键词搜索
 
@@ -462,6 +462,7 @@ make help           # 显示所有目标
 - [Memory 用法与参考](USAGE.md) — 根级 Memory 命令、导入、回执与嵌入向量支持
 - [记忆导入指南](IMPORT.md) — 导入历史聊天的 schema 与 LLM 提取提示词
 - [架构图](../diagrams/) — 系统架构、记忆/召回流程、四图模型、生命周期管理
+- [Memory Agent（实验性）](../../experimental/memory-agent/README.zh-CN.md) — Mnemon 以记忆 Agent 形态运行在 DSH 上的研究预览，由 System 1 决策模型 Jev 做判断；含论文、代码与运行记录
 
 ## 参考文献
 

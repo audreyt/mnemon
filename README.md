@@ -370,7 +370,7 @@ memory is useful.
 - **Four-graph architecture** — temporal, entity, causal, and semantic edges, not just vector similarity
 - **Intent-native protocol** — three primitives (`remember`, `link`, `recall`) map to the LLM's cognitive vocabulary, not database syntax; structured JSON output with signal transparency
 - **Intent-aware recall** — graph traversal + optional vector search (RRF fusion), enabled by default for all queries
-- **Built-in deduplication** — `remember` auto-detects duplicates and conflicts; skips or auto-replaces
+- **Built-in deduplication** — `remember` and `import` skip exact content repeats and preserve distinct facts; similarity suggestions guide review
 - **Retention lifecycle** — importance decay, access-count boosting, and garbage collection
 - **Privacy-safe receipts** — export hashed operation receipts for memory-boundary audits without raw memory contents or queries
 - **Optional embeddings** — works fully without an embedding provider; add local [Ollama](https://ollama.ai) or an OpenAI-compatible server for enhanced vector+keyword hybrid search
@@ -536,6 +536,7 @@ See [Development and Deployment](docs/DEPLOYMENT.md) for Docker, Compose, Ollama
 - [Memory Usage & Reference](docs/USAGE.md) — root Memory commands, import, receipts, and embedding support
 - [Memory Import Guide](docs/IMPORT.md) — schema and LLM prompt for importing historical chats
 - [Architecture Diagrams](docs/diagrams/) — system architecture, pipelines, lifecycle management
+- [Memory Agent (experimental)](experimental/memory-agent/) — research preview of Mnemon as a memory agent on DSH, with Jev as its System 1 decision model; paper, code and run records
 
 ## Star History
 
