@@ -2,7 +2,6 @@ package store
 
 import (
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/mnemon-dev/mnemon/internal/memory/model"
@@ -36,61 +35,70 @@ func (db *DB) GetEdgesByNode(nodeID string) ([]*model.Edge, error) {
 	return scanEdges(rows)
 }
 
-// supersededLookupChunk bounds how many ids go into one IN clause. SQLite's
-// host-parameter ceiling is 32766 on current builds and 999 on older ones;
-// 500 stays inside both. Recall's candidate set is normally far smaller, so
-// the loop below runs once.
-const supersededLookupChunk = 500
+// GetNeighborEdges returns every edge touching nodeID with the columns beam
+// search scores on (metadata and created_at are left zero). Both halves are
+// answered from the covering indexes alone, and the fixed order makes recall
+// deterministic: beam search stops at a visit budget, so which neighbours it
+// reaches depends on the order edges arrive in.
+func (db *DB) GetNeighborEdges(nodeID string) ([]*model.Edge, error) {
+	rows, err := db.execer().Query(
+		`SELECT source_id, target_id, edge_type, weight FROM edges WHERE source_id = ?
+		 UNION ALL
+		 SELECT source_id, target_id, edge_type, weight FROM edges WHERE target_id = ? AND source_id != ?
+		 ORDER BY weight DESC, source_id, target_id, edge_type`,
+		nodeID, nodeID, nodeID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var results []*model.Edge
+	for rows.Next() {
+		var e model.Edge
+		var edgeType string
+		if err := rows.Scan(&e.SourceID, &e.TargetID, &edgeType, &e.Weight); err != nil {
+			return nil, err
+		}
+		e.EdgeType = model.EdgeType(edgeType)
+		results = append(results, &e)
+	}
+	return results, rows.Err()
+}
 
 // GetSupersededIDs returns which of the given ids are the target of at least
 // one 'supersedes' edge, i.e. which of them some other insight claims to
 // replace. Recall uses this to demote stale content; the rows are kept so the
 // lineage stays inspectable.
 //
-// The lookup is scoped to the ids the caller holds. Reading every supersedes
-// edge in the store would cost time proportional to its whole supersession
-// history on a path that only needs a verdict for the current candidates,
-// and idx_edges_target_type answers the scoped form from the index.
+// It reads every supersedes target from the partial
+// idx_edges_supersedes_target (a few thousand ids, a few hundred KB) and
+// filters in memory. Probing the candidates one by one through the
+// whole-graph target index costs a random read per candidate on a cold cache.
+// SQLite's planner does not pick a partial index by itself, hence INDEXED BY.
 func (db *DB) GetSupersededIDs(ids []string) (map[string]bool, error) {
 	superseded := make(map[string]bool)
-	ex := db.execer()
-	for start := 0; start < len(ids); start += supersededLookupChunk {
-		end := min(start+supersededLookupChunk, len(ids))
-		if err := collectSupersededIDs(ex, ids[start:end], superseded); err != nil {
-			return nil, err
-		}
+	if len(ids) == 0 {
+		return superseded, nil
 	}
-	return superseded, nil
-}
-
-// collectSupersededIDs adds the superseded ids in one batch to into. The rows
-// are closed before returning: the pool holds a single connection, so an open
-// cursor would block the next batch.
-func collectSupersededIDs(ex dbExecer, chunk []string, into map[string]bool) error {
-	args := make([]any, 0, len(chunk)+1)
-	args = append(args, string(model.EdgeSupersedes))
-	placeholders := make([]string, len(chunk))
-	for i, id := range chunk {
-		placeholders[i] = "?"
-		args = append(args, id)
+	want := make(map[string]bool, len(ids))
+	for _, id := range ids {
+		want[id] = true
 	}
-
-	rows, err := ex.Query(fmt.Sprintf(
-		`SELECT DISTINCT target_id FROM edges WHERE edge_type = ? AND target_id IN (%s)`,
-		strings.Join(placeholders, ",")), args...)
+	rows, err := db.execer().Query(
+		`SELECT target_id FROM edges INDEXED BY idx_edges_supersedes_target WHERE edge_type = 'supersedes'`)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	defer rows.Close()
-
 	for rows.Next() {
 		var id string
 		if err := rows.Scan(&id); err != nil {
-			return err
+			return nil, err
 		}
-		into[id] = true
+		if want[id] {
+			superseded[id] = true
+		}
 	}
-	return rows.Err()
+	return superseded, rows.Err()
 }
 
 // GetEdgesByNodeAndType returns edges for a node filtered by edge type.
