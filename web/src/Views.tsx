@@ -5,7 +5,6 @@ import {
   BookOpen,
   Clock3,
   Hash,
-  Layers3,
   Network,
   Search,
   Shapes,
@@ -49,9 +48,9 @@ export function OverviewView({
   return (
     <>
       <PageHeading
-        eyebrow="YOUR KNOWLEDGE, CONNECTED"
-        title="A little more clarity."
-        description="A home for everything your agents have learned along the way."
+        eyebrow="Workspace overview"
+        title="Your knowledge, connected."
+        description="Explore what your agents have learned, decided, and remembered."
         action={
           <Link
             className="button primary"
@@ -68,15 +67,12 @@ export function OverviewView({
           <>
             <div className="overview-banner">
               <div className="banner-mark">
-                <Layers3 size={28} />
+                <img src="/mnemon-logo.svg" alt="" width="56" height="56" />
               </div>
               <div>
-                <span className="eyebrow">THE BIGGER PICTURE</span>
-                <h2>Small memories. Lasting knowledge.</h2>
-                <p>
-                  Your decisions, discoveries, and context — gathered in one
-                  quiet place.
-                </p>
+                <span className="eyebrow">Mnemon</span>
+                <h2>Memory becomes shared knowledge.</h2>
+                <p>Read the source. Follow a connection. Keep the context.</p>
               </div>
               <div className="banner-orbit" aria-hidden="true">
                 <span />
@@ -276,9 +272,9 @@ export function LibraryView({
   return (
     <>
       <PageHeading
-        eyebrow="YOUR COLLECTION"
+        eyebrow="Collection"
         title="Memory library"
-        description="Find the thought you need. Follow it somewhere new."
+        description="Search decisions, discoveries, and context across your memory store."
       />
       <Filters meta={meta} facets={facets.data} />
       <QueryView query={query}>
@@ -554,7 +550,7 @@ export function EntitiesView({ refresh }: { refresh: number }) {
   return (
     <>
       <PageHeading
-        eyebrow="THE THREADS BETWEEN IDEAS"
+        eyebrow="Connections"
         title="Entities"
         description="People, projects, and concepts that bring your memories together."
       />

@@ -25,6 +25,8 @@ The sidebar selects the store being inspected. This selection leaves the CLI's a
 
 Browsing reads memory without updating access counts, retention weights, the operation log, or memory content. Superseded memories remain readable with correction context; deleted memories are hidden. A source value is the stored producer label.
 
+The interface uses Mnemon’s official graphite-and-silver logo and a locally bundled Space Grotesk font, with system Chinese font fallbacks. Use **Appearance** in the top bar to select **System**, **Light**, or **Dark**. The choice persists in this browser and synchronizes across tabs. System mode follows the operating system; an explicit selection takes priority. Theme initialization runs before the application loads to prevent a mismatched first paint.
+
 The interface refreshes while visible and supports manual refresh. Pagination observes a live database: concurrent agent writes can change page membership. Refresh restarts pagination. Large graphs and bounded search results disclose truncation. Graph responses contain at most 200 nodes and 800 stored edges. Relevance sorting ranks the newest 5,000 literal substring matches, displays the full matching count, and labels truncated results. Other list cursors allow traversal up to 100,000 rows; overview facets show up to 200 values. Search operates locally and requires no model/provider call.
 
 Memory Markdown renders with raw HTML execution disabled. Runtime scripts, styles, and graph dependencies are bundled locally. The server serves private responses with caching disabled and rejects unrelated origins/hosts. Keep this release on the local machine; remote team access needs a separate authentication and authorization design.

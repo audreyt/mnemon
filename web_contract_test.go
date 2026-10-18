@@ -62,10 +62,21 @@ func TestEmbeddedWebAssetsAreLocallyResolvable(t *testing.T) {
 	if strings.Contains(string(index), "https://") || strings.Contains(string(index), "http://") {
 		t.Fatal("index depends on an external asset")
 	}
-	for _, part := range strings.Split(string(index), `="/assets/`)[1:] {
-		name := "assets/" + strings.SplitN(part, `"`, 2)[0]
+	for _, match := range regexp.MustCompile(`(?:src|href)="/([^"?#]+)"`).FindAllSubmatch(index, -1) {
+		name := string(match[1])
 		if _, err := fs.Stat(assets, name); err != nil {
 			t.Errorf("missing embedded asset %s: %v", name, err)
 		}
+	}
+	logo, err := fs.ReadFile(assets, "mnemon-logo.svg")
+	if err != nil {
+		t.Fatal(err)
+	}
+	official, err := os.ReadFile("docs/logo/logo.svg")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(logo) != string(official) {
+		t.Fatal("embedded logo differs from official artwork")
 	}
 }

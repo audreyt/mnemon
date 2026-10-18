@@ -25,6 +25,82 @@ import {
 import { Filters } from "./Filters";
 import { filtersOnly, Link, routeURL, useRouter } from "./router";
 import type { GraphData, Insight, Meta } from "./types";
+import { useTheme } from "./theme";
+
+function graphPalette() {
+  const styles = getComputedStyle(document.documentElement);
+  const value = (name: string, fallback: string) =>
+    styles.getPropertyValue(name).trim() || fallback;
+  return {
+    label: value("--graph-label", "#55555f"),
+    edge: value("--graph-edge", "#b8b8c2"),
+    selected: value("--graph-selection", "#202024"),
+    outline: value("--graph-outline", "#ffffff"),
+  };
+}
+
+export function graphStyle(
+  palette: ReturnType<typeof graphPalette>,
+): cytoscape.StylesheetJson {
+  return [
+    {
+      selector: "node",
+      style: {
+        "background-color": "data(color)",
+        label: "data(label)",
+        width: "data(size)",
+        height: "data(size)",
+        "font-size": 10,
+        "font-family": "Space Grotesk, sans-serif",
+        color: palette.label,
+        "text-valign": "bottom",
+        "text-margin-y": 8,
+        "text-max-width": "120px",
+        "text-wrap": "ellipsis",
+        "border-width": 4,
+        "border-color": palette.outline,
+        "border-opacity": 0.9,
+      },
+    },
+    {
+      selector: "node:selected",
+      style: {
+        "border-color": palette.selected,
+        "border-width": 5,
+        "text-outline-color": palette.outline,
+        "text-outline-width": 3,
+        color: palette.selected,
+      },
+    },
+    {
+      selector: "edge",
+      style: {
+        width: 1.25,
+        "line-color": palette.edge,
+        "target-arrow-color": palette.edge,
+        "target-arrow-shape": "triangle",
+        "curve-style": "bezier",
+        "arrow-scale": 0.7,
+        opacity: 0.8,
+      },
+    },
+    {
+      selector: 'edge[supersedes = "yes"]',
+      style: {
+        "line-color": "#c19857",
+        "target-arrow-color": "#c19857",
+        "line-style": "dashed",
+        color: palette.label,
+        label: "data(label)",
+        "font-size": 9,
+        "text-rotation": "autorotate",
+        "text-background-color": palette.outline,
+        "text-background-opacity": 1,
+        "text-background-padding": "3px",
+      },
+    },
+  ];
+}
 
 function GraphCanvas({
   data,
@@ -37,12 +113,14 @@ function GraphCanvas({
   onSelect: (id: string) => void;
   focus: string;
 }) {
+  const { resolved } = useTheme();
   const container = useRef<HTMLDivElement>(null);
   const graph = useRef<Core | null>(null);
   const selectCallback = useRef(onSelect);
   selectCallback.current = onSelect;
   useEffect(() => {
     if (!container.current) return;
+    const palette = graphPalette();
     const nodeIDs = new Set(data.nodes.map((node) => node.id));
     const instance = cytoscape({
       container: container.current,
@@ -70,62 +148,7 @@ function GraphCanvas({
             },
           })),
       ],
-      style: [
-        {
-          selector: "node",
-          style: {
-            "background-color": "data(color)",
-            label: "data(label)",
-            width: "data(size)",
-            height: "data(size)",
-            "font-size": 10,
-            color: "#6d6863",
-            "text-valign": "bottom",
-            "text-margin-y": 8,
-            "text-max-width": "120px",
-            "text-wrap": "ellipsis",
-            "border-width": 4,
-            "border-color": "#ffffff",
-            "border-opacity": 0.9,
-          },
-        },
-        {
-          selector: "node:selected",
-          style: {
-            "border-color": "#6e4caf",
-            "border-width": 5,
-            "text-outline-color": "#faf9f6",
-            "text-outline-width": 3,
-            color: "#453164",
-          },
-        },
-        {
-          selector: "edge",
-          style: {
-            width: 1.25,
-            "line-color": "#d9d3e1",
-            "target-arrow-color": "#c5bad5",
-            "target-arrow-shape": "triangle",
-            "curve-style": "bezier",
-            "arrow-scale": 0.7,
-            opacity: 0.8,
-          },
-        },
-        {
-          selector: 'edge[supersedes = "yes"]',
-          style: {
-            "line-color": "#c19857",
-            "target-arrow-color": "#c19857",
-            "line-style": "dashed",
-            label: "data(label)",
-            "font-size": 9,
-            "text-rotation": "autorotate",
-            "text-background-color": "#faf9f6",
-            "text-background-opacity": 1,
-            "text-background-padding": "3px",
-          },
-        },
-      ],
+      style: graphStyle(palette),
       layout: {
         name: "cose",
         animate: false,
@@ -150,6 +173,13 @@ function GraphCanvas({
       graph.current = null;
     };
   }, [data]);
+  useEffect(() => {
+    const instance = graph.current;
+    if (!instance) return;
+    const palette = graphPalette();
+    // Update the canvas palette without resetting the user's layout or zoom.
+    instance.style(graphStyle(palette));
+  }, [resolved, data]);
   useEffect(() => {
     const instance = graph.current;
     if (!instance) return;
@@ -251,9 +281,9 @@ export function GraphView({ meta, refresh }: { meta: Meta; refresh: number }) {
   return (
     <>
       <PageHeading
-        eyebrow="SEE HOW IT ALL CONNECTS"
+        eyebrow="Relationships"
         title="Knowledge graph"
-        description="Every memory is a point of departure. Discover the relationships around it."
+        description="Follow the stored relationships between memories."
       />
       <Filters meta={meta} graph />
       <div className="graph-toolbar">
@@ -409,7 +439,7 @@ function GraphPreview({
   return (
     <aside className="graph-preview">
       <div className="section-heading">
-        <span className="eyebrow">SELECTED MEMORY</span>
+        <span className="eyebrow">Selected memory</span>
         <button
           className="icon-button"
           aria-label="Close selected memory"

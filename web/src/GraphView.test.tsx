@@ -1,12 +1,19 @@
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import { expect, it, vi } from "vitest";
-import { GraphView } from "./GraphView";
+import { GraphView, graphStyle } from "./GraphView";
 import { Router } from "./router";
 import type { Insight, Meta } from "./types";
+import { ThemeProvider } from "./theme";
 
 vi.mock("cytoscape", () => ({
   default: () => ({
     on: vi.fn(),
+    style: () => {
+      const sheet = { selector: vi.fn(), style: vi.fn(), update: vi.fn() };
+      sheet.selector.mockReturnValue(sheet);
+      sheet.style.mockReturnValue(sheet);
+      return sheet;
+    },
     resize: vi.fn(),
     destroy: vi.fn(),
     nodes: () => ({ unselect: vi.fn() }),
@@ -18,6 +25,37 @@ vi.mock("cytoscape", () => ({
     layout: () => ({ run: vi.fn() }),
   }),
 }));
+it("preserves correction edge semantics when replacing the theme stylesheet", () => {
+  for (const palette of [
+    {
+      label: "#505058",
+      edge: "#a8a8b2",
+      selected: "#26262b",
+      outline: "#f7f7f8",
+    },
+    {
+      label: "#cdcdd3",
+      edge: "#65656f",
+      selected: "#d4d4d8",
+      outline: "#1a1a1a",
+    },
+  ]) {
+    const styles = graphStyle(palette);
+    const correction = styles.find(
+      (rule) => rule.selector === 'edge[supersedes = "yes"]',
+    );
+    expect(
+      correction && "style" in correction ? correction.style : undefined,
+    ).toMatchObject({
+      "line-color": "#c19857",
+      "target-arrow-color": "#c19857",
+      "line-style": "dashed",
+      color: palette.label,
+      "text-background-color": palette.outline,
+    });
+    expect(styles).toHaveLength(4);
+  }
+});
 const memory: Insight = {
   id: "m1",
   content: "A connected thought",
@@ -69,9 +107,11 @@ it("supports keyboard-equivalent graph selection, reader links, URL focus, and B
     })),
   );
   render(
-    <Router>
-      <GraphView meta={meta} refresh={0} />
-    </Router>,
+    <ThemeProvider>
+      <Router>
+        <GraphView meta={meta} refresh={0} />
+      </Router>
+    </ThemeProvider>,
   );
   const node = await screen.findByRole("button", {
     name: /A connected thought/,

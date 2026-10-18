@@ -8,16 +8,19 @@ import {
   Hash,
   LayoutDashboard,
   Menu,
+  Monitor,
+  Moon,
+  Sun,
   Network,
   RefreshCw,
   Search,
-  Sparkles,
   X,
 } from "lucide-react";
 import { useQuery } from "./api";
 import { Empty, humanize, QueryView } from "./components";
 import { filtersOnly, Link, routeURL, useRouter } from "./router";
 import type { Meta, Page } from "./types";
+import { useTheme, type ThemeMode } from "./theme";
 import {
   ActivityView,
   EntitiesView,
@@ -100,13 +103,17 @@ function Workspace({ meta }: { meta: Meta }) {
           href={route.store ? routeURL(route.store, "overview") : "/"}
           className="brand"
         >
-          <span className="brand-icon">
-            <Sparkles size={21} strokeWidth={1.7} />
-          </span>
-          mnemon<span className="brand-period">.</span>
+          <img
+            className="brand-logo"
+            src="/mnemon-logo.svg"
+            alt=""
+            width="40"
+            height="40"
+          />
+          <span>mnemon</span>
         </Link>
         <div className="workspace-selector">
-          <label htmlFor="store-selector">WORKSPACE</label>
+          <label htmlFor="store-selector">Workspace</label>
           <div>
             <span className="workspace-avatar">
               {(route.store || "M").slice(0, 1).toUpperCase()}
@@ -140,7 +147,7 @@ function Workspace({ meta }: { meta: Meta }) {
             </select>
           </div>
         </div>
-        <div className="nav-label">KNOWLEDGE</div>
+        <div className="nav-label">Knowledge</div>
         <nav>
           {navigation.map((item) => (
             <Link
@@ -169,12 +176,12 @@ function Workspace({ meta }: { meta: Meta }) {
           <div className="sidebar-note">
             <div>
               <span className="live-dot" />
-              LOCAL & PRIVATE
+              Local & private
             </div>
             <p>
-              A quiet place for
+              Your agents’ knowledge,
               <br />
-              everything worth remembering.
+              ready to explore.
             </p>
             <span>
               Read-only workspace <ArrowUpRight size={12} />
@@ -249,6 +256,7 @@ function Workspace({ meta }: { meta: Meta }) {
             >
               <RefreshCw size={16} />
             </button>
+            <AppearanceControl />
             <span className="topbar-divider" />
             <span className="local-status">
               <span className="live-dot" />
@@ -298,7 +306,7 @@ function Workspace({ meta }: { meta: Meta }) {
           )}
         </main>
         <footer className="app-footer">
-          <span>Made for a mind that keeps growing.</span>
+          <span>Knowledge accumulated. Context preserved.</span>
           <span>Mnemon · Knowledge workspace</span>
         </footer>
       </div>
@@ -327,10 +335,14 @@ function Workspace({ meta }: { meta: Meta }) {
             >
               <X size={18} />
             </button>
-            <div className="brand-icon">
-              <Sparkles size={24} />
-            </div>
-            <h2 id="about-title">Your knowledge, at home.</h2>
+            <img
+              className="brand-logo"
+              src="/mnemon-logo.svg"
+              alt=""
+              width="48"
+              height="48"
+            />
+            <h2 id="about-title">Your memory workspace</h2>
             <p>
               Mnemon is a local, read-only window into the memories your agents
               have stored. Browsing does not change your memories or their
@@ -350,6 +362,25 @@ function Workspace({ meta }: { meta: Meta }) {
         </div>
       )}
     </div>
+  );
+}
+function AppearanceControl() {
+  const { mode, setMode } = useTheme();
+  const Icon = mode === "system" ? Monitor : mode === "dark" ? Moon : Sun;
+  return (
+    <label className="theme-control" title="Appearance">
+      <Icon size={16} aria-hidden="true" />
+      <span className="sr-only">Appearance</span>
+      <select
+        aria-label="Appearance"
+        value={mode}
+        onChange={(event) => setMode(event.target.value as ThemeMode)}
+      >
+        <option value="system">System</option>
+        <option value="light">Light</option>
+        <option value="dark">Dark</option>
+      </select>
+    </label>
   );
 }
 function StoreView({
