@@ -35,6 +35,15 @@ jobs:
         with:
           node-version: 22.19.0
 
+      - name: Verify web workspace
+        run: |
+          npm ci --prefix web
+          npm run typecheck --prefix web
+          npm test --prefix web
+          npm run build --prefix web
+          git diff --exit-code -- web/dist
+          test -z "$(git ls-files --others --exclude-standard web/dist)"
+
       - name: Run deterministic test suite
         run: make test
 

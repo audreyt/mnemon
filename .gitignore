@@ -51,3 +51,8 @@ __pycache__/
 
 # GoReleaser
 dist/
+
+# Web dependencies; production assets ship inside the Go executable.
+web/node_modules/
+!web/dist/
+!web/dist/**

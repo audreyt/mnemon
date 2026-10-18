@@ -60,6 +60,25 @@ Memory has a **compound interest effect** — the longer it accumulates, the gre
 
 See [Design & Architecture](docs/DESIGN.md) for details.
 
+## Web knowledge workspace
+
+Browse the knowledge accumulated by your agents in a standalone local website:
+
+```sh
+mnemon web
+# Open http://127.0.0.1:8484
+```
+
+Explore a searchable memory library, readable memory pages, a relationship graph,
+entities, and recorded activity. Select a memory store in the sidebar while agents
+continue writing through the existing CLI. Browsing preserves memory content,
+access counts, retention weights, and the CLI's active-store selection.
+
+Use `mnemon web --store <name> --port 8485` to choose the initial store and port.
+The interface ships inside the Mnemon executable and uses bundled local assets.
+See the [web workspace guide](docs/development/web-workspace.md) for usage,
+live-read behavior, and frontend development.
+
 ## Quick Start
 
 ### Install
