@@ -84,7 +84,12 @@ func OpenLiveReadOnly(ctx context.Context, baseDir, name string) (*DB, error) {
 	if err != nil {
 		return nil, err
 	}
-	uri := &url.URL{Scheme: "file", Path: filepath.ToSlash(path)}
+	uriPath := filepath.ToSlash(path)
+	// Keep Windows drive letters in the URI path, as OpenReadOnly does.
+	if !strings.HasPrefix(uriPath, "/") {
+		uriPath = "/" + uriPath
+	}
+	uri := &url.URL{Scheme: "file", Path: uriPath}
 	q := uri.Query()
 	q.Set("mode", "ro")
 	q.Add("_pragma", "query_only(1)")

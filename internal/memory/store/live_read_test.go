@@ -5,6 +5,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 	"time"
 )
@@ -182,7 +183,11 @@ func TestLiveReadOnlyURIPathEscaping(t *testing.T) {
 	if err := writer.Close(); err != nil {
 		t.Fatal(err)
 	}
-	root := filepath.Join(parent, "space ? # 中文")
+	name := "space # % 中文"
+	if runtime.GOOS != "windows" {
+		name += " ?"
+	}
+	root := filepath.Join(parent, name)
 	if err := os.Rename(original, root); err != nil {
 		t.Fatal(err)
 	}
