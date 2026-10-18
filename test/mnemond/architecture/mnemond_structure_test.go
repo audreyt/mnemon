@@ -96,8 +96,9 @@ func assertMnemondPackageGraph(t *testing.T, root string) {
 		"cmd/memory": {
 			"internal/memory/embed", "internal/memory/graph", "internal/memory/importdraft",
 			"internal/memory/model", "internal/memory/search", "internal/memory/setup",
-			"internal/memory/setup/assets", "internal/memory/store",
+			"internal/memory/setup/assets", "internal/memory/store", "internal/memory/web", "web",
 		},
+		"web": {},
 	}
 	got := make(map[string]map[string]struct{}, len(want))
 	for component := range want {

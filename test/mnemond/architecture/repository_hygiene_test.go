@@ -95,6 +95,9 @@ func TestRepositoryHygieneRulesAcceptDurableJSONCategories(t *testing.T) {
 		"package.json",
 		"npm/cli/package.json",
 		"npm/cli/targets.json",
+		"web/package.json",
+		"web/package-lock.json",
+		"web/tsconfig.json",
 		"internal/memory/setup/assets/openclaw/plugin/openclaw.plugin.json",
 		"internal/memory/setup/assets/openclaw/plugin/package.json",
 	} {
@@ -242,6 +245,8 @@ func durableJSONCategory(trackedPath string) string {
 		return "DSH package manifest"
 	case trackedPath == "npm/cli/package.json" || trackedPath == "npm/cli/targets.json":
 		return "npm CLI manifest"
+	case trackedPath == "web/package.json" || trackedPath == "web/package-lock.json" || trackedPath == "web/tsconfig.json":
+		return "web build configuration"
 	case strings.HasPrefix(trackedPath, "internal/memory/setup/assets/"):
 		return "managed asset"
 	default:
