@@ -1,0 +1,67 @@
+### Recall — before responding
+
+**Default: recall on every new user message**, unless ALL of these apply:
+- Direct follow-up within a topic already fully in context
+- No reference to past sessions, decisions, or preferences
+- No knowledge dependency beyond the current conversation
+
+**Before web search**: always recall first — stored context sharpens queries.
+
+To recall: `mnemon recall "<query>" --limit 5`.
+Craft a focused, keyword-rich query — do not pass the raw user prompt.
+
+Keep the query and memories in their original language. If intent is clear from
+meaning, pass `--intent WHY` (reasons), `WHEN` (timing), `ENTITY` (what/who), or
+`GENERAL` (neutral). Automatic detection recognizes only bounded question forms;
+unrecognized forms and conflicting additional-language cues use GENERAL.
+English/Chinese-only scoring is preserved. `--verbose` reports the selected intent
+and its source. See [supported languages, scripts, and limits](https://github.com/mnemon-dev/mnemon/blob/master/docs/USAGE.md#recall-intent-detection).
+
+### Remember — after responding
+
+Run this decision tree after every substantive response.
+**Bias toward storing**: when in doubt, store it. Low-importance memories are cheap; missing context is expensive.
+
+**Step 1 — Does this exchange contain any of the following?**
+
+Tier A (importance 4-5, always store):
+- User directive — explicit preference, decision, correction, or "remember this"
+- Reasoning conclusion — non-trivial judgment from multi-source synthesis
+- Durable system/architectural fact discovered during this session
+- User-specific context that no search engine can recover
+
+Tier B (importance 2-3, store unless trivial):
+- Casual preference revealed in passing ("I usually...", "I prefer...", "I don't like...")
+- Topic the user is currently exploring or curious about
+- Useful framing or analogy the user offered
+- Background context about the user's projects, tools, or setup
+- Interesting question the user raised, even if not fully resolved
+
+Tier C (importance 1, store only if genuinely reusable):
+- Conversational context that might help future sessions feel continuous
+- Soft signal about communication style or mood
+
+→ None of the above → STOP.
+
+**Step 2 — Does a highly overlapping memory already exist?**
+→ Yes, incremental new info → STORE the new content; review the existing memory separately
+→ Yes, but contradicts/supersedes → STORE and verify the new fact; explicitly forget the old ID only if superseded
+→ No significant overlap → CREATE
+
+**Step 3 — Importance calibration**
+Use the full 1-5 scale intentionally:
+- 5: Cross-session core fact, architectural decision, strong user preference
+- 4: Important context, significant finding, clear user preference
+- 3: Useful background, project context, topic of interest
+- 2: Passing mention, soft preference, conversational color
+- 1: Ephemeral but potentially useful continuity
+
+Aim for a rough distribution: ~20% at 4-5, ~50% at 2-3, ~30% at 1.
+Avoid defaulting everything to 4-5 — that defeats the scoring system.
+
+**What to store**: both conclusions AND context. Prefer storing a little too much over missing something useful.
+**How to store**: read the mnemon skill and run `mnemon remember` / `mnemon link` directly in the main conversation using Pi's bash tool.
+Choose content, category, importance, and entities; review the returned candidates before linking memories.
+
+Do NOT store secrets, passwords, tokens, private keys, or short-lived operational noise.
+Do NOT remember operational/public/git-tracked/transient information.

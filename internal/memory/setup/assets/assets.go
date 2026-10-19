@@ -170,6 +170,9 @@ var PiSkill []byte
 //go:embed pi/mnemon.ts
 var PiExtension []byte
 
+//go:embed pi/guide.md
+var PiGuide []byte
+
 //go:embed hermes/SKILL.md
 var HermesSkill []byte
 

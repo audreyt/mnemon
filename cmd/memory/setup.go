@@ -1327,9 +1327,8 @@ func installPi(env *setup.Environment) error {
 	configDir := env.ConfigDir
 
 	if !setupGlobal && !setupYes && setup.IsInteractive() {
-		home := setup.HomeDir()
 		localDir := ".pi"
-		globalDir := home + "/.pi/agent"
+		globalDir := setup.PiGlobalDir()
 		idx := setup.SelectOne("Install scope",
 			[]string{
 				fmt.Sprintf("Local — this project only (%s/)", localDir),
@@ -1354,7 +1353,7 @@ func installPi(env *setup.Environment) error {
 
 	fmt.Println("\n[2/3] Prompts")
 	var promptPath string
-	if path, err := setup.WritePromptFiles(); err != nil {
+	if path, err := setup.PiWritePromptFiles(); err != nil {
 		setup.StatusError(0, 0, "Prompts", err)
 		return err
 	} else {

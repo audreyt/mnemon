@@ -36,17 +36,21 @@ func WritePromptFiles() (string, error) {
 	if err != nil {
 		return "", err
 	}
+	return writePromptFiles(dir, assets.ClaudeGuide, assets.ClaudeSkill)
+}
+
+func writePromptFiles(dir string, guide, skill []byte) (string, error) {
 	if err := os.MkdirAll(dir, 0755); err != nil {
 		return "", err
 	}
 
 	guidePath := filepath.Join(dir, "guide.md")
-	if err := os.WriteFile(guidePath, assets.ClaudeGuide, 0644); err != nil {
+	if err := os.WriteFile(guidePath, guide, 0644); err != nil {
 		return "", err
 	}
 
 	skillPath := filepath.Join(dir, "skill.md")
-	if err := os.WriteFile(skillPath, assets.ClaudeSkill, 0644); err != nil {
+	if err := os.WriteFile(skillPath, skill, 0644); err != nil {
 		return "", err
 	}
 
