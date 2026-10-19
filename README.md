@@ -573,11 +573,11 @@ See [Development and Deployment](docs/DEPLOYMENT.md) for Docker, Compose, Ollama
 
 ## Star History
 
-<a href="https://star-history.dera.page/#mnemon-dev/mnemon">
+<a href="https://www.star-history.com/?repos=mnemon-dev%2Fmnemon&type=timeline&legend=bottom-right">
  <picture>
-   <source media="(prefers-color-scheme: dark)" srcset="https://star-history.dera.page/svg?repos=mnemon-dev/mnemon&theme=dark" />
-   <source media="(prefers-color-scheme: light)" srcset="https://star-history.dera.page/svg?repos=mnemon-dev/mnemon" />
-   <img alt="Star History Chart" src="https://star-history.dera.page/svg?repos=mnemon-dev/mnemon" />
+   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=mnemon-dev/mnemon&type=timeline&theme=dark&legend=bottom-right" />
+   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=mnemon-dev/mnemon&type=timeline&legend=bottom-right" />
+   <img alt="Star History Chart" src="https://api.star-history.com/chart?repos=mnemon-dev/mnemon&type=timeline&legend=bottom-right" />
  </picture>
 </a>
 
