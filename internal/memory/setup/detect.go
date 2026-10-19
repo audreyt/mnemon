@@ -623,8 +623,7 @@ func detectNanobot(global bool) Environment {
 }
 
 func detectPi(global bool) Environment {
-	home := HomeDir()
-	globalDir := filepath.Join(home, ".pi", "agent")
+	globalDir := PiGlobalDir()
 	localDir := ".pi"
 
 	configDir := localDir

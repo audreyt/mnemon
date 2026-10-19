@@ -4,9 +4,36 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
+	"strings"
 
 	"github.com/mnemon-dev/mnemon/internal/memory/setup/assets"
 )
+
+// PiGlobalDir follows Pi's user-level directory override, including ~/ paths.
+func PiGlobalDir() string {
+	home := HomeDir()
+	if dir := os.Getenv("PI_CODING_AGENT_DIR"); dir != "" {
+		if dir == "~" {
+			return home
+		}
+		if strings.HasPrefix(dir, "~/") || (runtime.GOOS == "windows" && strings.HasPrefix(dir, `~\`)) {
+			return filepath.Join(home, dir[2:])
+		}
+		return dir
+	}
+	return filepath.Join(home, ".pi", "agent")
+}
+
+// PiWritePromptFiles keeps Pi's direct memory workflow separate from the
+// shared Claude guide, so setting up either host cannot replace the other.
+func PiWritePromptFiles() (string, error) {
+	dir, err := promptDir()
+	if err != nil {
+		return "", err
+	}
+	return writePromptFiles(filepath.Join(dir, "pi"), assets.PiGuide, assets.PiSkill)
+}
 
 // PiWriteSkill writes the mnemon skill to the Pi skills directory.
 func PiWriteSkill(configDir string) (string, error) {

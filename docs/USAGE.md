@@ -117,6 +117,27 @@ and is cleared on plugin unload. Compaction receives the durable-memory
 guidance, and shell commands receive `MNEMON_OPENCODE=1`. Missing or failed CLI
 calls leave the conversation usable; each call has a five-second timeout.
 
+### Pi
+
+After updating Mnemon, rerun `mnemon setup --target pi --yes` in the project,
+or add `--global` for a user-wide installation, then start a new Pi session or
+run `/reload`. Local files live in `.pi/`; global files use
+`PI_CODING_AGENT_DIR` when nonempty, otherwise the user's `.pi/agent/` directory.
+The override accepts native paths and `~/` paths; setup and eject use the same
+directory. Windows resolves the user profile even when `HOME` is unset.
+
+Pi reads its own `~/.mnemon/prompt/pi/guide.md` (or
+`$MNEMON_DATA_DIR/prompt/pi/guide.md`) and runs memory commands directly through
+its bash tool. Other integrations retain their shared `prompt/guide.md`;
+running setup for either host preserves the other guide. Older shared guides
+are never used as a Pi fallback, so refresh setup to install the new guide.
+
+Keep `mnemon` on Pi's `PATH`. The extension supports native executables and
+standard global or local npm installs on Unix and Windows, resolving npm's
+platform binary without invoking a shell or `.cmd` shim. Status requests have a
+five-second timeout and a 256 KiB output limit. Missing or failed status calls
+leave the conversation usable and show the generic memory-active message.
+
 ---
 
 ## Memory CLI Commands

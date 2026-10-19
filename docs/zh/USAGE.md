@@ -109,6 +109,24 @@ mnemon setup --eject --target claude-code
 shell 命令会收到 `MNEMON_OPENCODE=1`。CLI 不可用或调用失败不会阻断对话，
 每次调用的超时上限为五秒。
 
+### Pi
+
+更新 Mnemon 后，在项目中重新运行 `mnemon setup --target pi --yes`；若原来是
+用户级安装，则加 `--global`，然后启动新 Pi session 或运行 `/reload`。
+项目配置写入 `.pi/`；用户级配置使用非空的 `PI_CODING_AGENT_DIR`，否则使用
+用户目录下的 `.pi/agent/`。该变量支持原生路径和 `~/` 路径，安装与卸载使用
+同一目录。Windows 上即使未设置 `HOME`，也会使用用户 profile 目录。
+
+Pi 读取独立的 `~/.mnemon/prompt/pi/guide.md`，或
+`$MNEMON_DATA_DIR/prompt/pi/guide.md`，通过自身的 bash 工具直接执行记忆命令。
+其他集成继续使用共享的 `prompt/guide.md`；安装任一宿主不会覆盖另一份指引。
+Pi 不会回退到旧的共享指引，请重新运行 setup 安装新文件。
+
+请确保 Pi 的 `PATH` 能找到 `mnemon`。扩展在 Unix 和 Windows 上均支持原生
+可执行文件及标准 npm 全局或本地安装，会直接定位 npm 的平台二进制，不调用
+shell 或 `.cmd` shim。状态查询上限为五秒，输出上限为 256 KiB。查询缺失或
+失败时不阻断对话，并显示通用的记忆启用提示。
+
 ---
 
 ## Memory CLI 命令

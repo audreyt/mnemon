@@ -10,6 +10,7 @@ on:
         options:
           - all
           - zcode-windows
+          - pi-windows
 
 permissions:
   contents: read
@@ -20,7 +21,7 @@ concurrency:
 
 jobs:
   verify:
-    if: inputs.suite != 'zcode-windows'
+    if: inputs.suite == 'all'
     runs-on: ubuntu-latest
     timeout-minutes: 60
 
@@ -63,3 +64,33 @@ jobs:
         run: |
           $env:MNEMON_TEST_BIN = (Resolve-Path ./mnemon.exe).Path
           go test ./test/memory/zcode -v -count=1
+
+  pi-windows:
+    if: inputs.suite == 'all' || inputs.suite == 'pi-windows'
+    runs-on: windows-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache-dependency-path: go.sum
+
+      - name: Set up native Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24.16.0'
+
+      - name: Build Windows Memory product
+        run: go build -o mnemon.exe .
+
+      - name: Test installed Pi extension in native Node
+        shell: pwsh
+        run: |
+          $env:MNEMON_TEST_BIN = (Resolve-Path ./mnemon.exe).Path
+          go test ./test/memory/pi -v -count=1
