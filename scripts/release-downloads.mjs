@@ -5,6 +5,17 @@ import { writeFile } from "node:fs/promises";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 
+function formatDownloads(downloads) {
+  // Match the SI units and precision used by Shields' npm download badges.
+  const units = ["", "k", "M", "G", "T", "P"];
+  let unit = 0;
+  while (unit < units.length - 1 && downloads >= 1000 ** (unit + 1)) unit++;
+  if (unit === 0) return String(downloads);
+  const scaled = downloads / 1000 ** unit;
+  const rounded = scaled < 10 ? Number(scaled.toFixed(1)) : Math.round(scaled);
+  return rounded === 1000 ? `1${units[unit + 1]}` : `${rounded}${units[unit]}`;
+}
+
 export function releaseDownloadBadge(releases) {
   if (!Array.isArray(releases)) throw new Error("Expected a release array");
   let downloads = 0;
@@ -24,7 +35,7 @@ export function releaseDownloadBadge(releases) {
   return {
     schemaVersion: 1,
     label: "GitHub downloads",
-    message: downloads.toLocaleString("en-US"),
+    message: formatDownloads(downloads),
     color: "brightgreen",
   };
 }

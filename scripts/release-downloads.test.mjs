@@ -21,12 +21,26 @@ test("counts published packages across versions while excluding checksums and ot
     { draft: true, assets: [asset("mnemon_0.3.0_linux_arm64.tar.gz", 999)] },
   ]);
   assert.deepEqual(badge, {
-    schemaVersion: 1, label: "GitHub downloads", message: "1,290", color: "brightgreen",
+    schemaVersion: 1, label: "GitHub downloads", message: "1.3k", color: "brightgreen",
   });
 });
 
 test("an empty public release set produces a valid zero badge", () => {
   assert.equal(releaseDownloadBadge([]).message, "0");
+});
+
+test("formats totals with npm badge precision, including unit rollover", () => {
+  const cases = [
+    [999, "999"], [1000, "1k"], [1290, "1.3k"], [9950, "9.9k"],
+    [9999, "10k"], [10000, "10k"], [19633, "20k"], [123456, "123k"],
+    [999499, "999k"], [999500, "1M"], [1000000, "1M"], [1250000, "1.3M"],
+    [12600000, "13M"], [999500000, "1G"], [1000000000, "1G"],
+    [1000000000000, "1T"], [Number.MAX_SAFE_INTEGER, "9P"],
+  ];
+  for (const [count, expected] of cases) {
+    const badge = releaseDownloadBadge([{ assets: [asset("mnemon_1_linux_amd64.tar.gz", count)] }]);
+    assert.equal(badge.message, expected, `downloads: ${count}`);
+  }
 });
 
 test("invalid archive counts and incomplete responses fail instead of silently undercounting", () => {
