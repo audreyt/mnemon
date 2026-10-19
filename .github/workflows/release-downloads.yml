@@ -1,0 +1,73 @@
+name: Release download badge
+
+on:
+  pull_request:
+    paths:
+      - .github/workflows/release-downloads.yml
+      - scripts/release-downloads*.mjs
+  push:
+    branches: [master]
+    paths:
+      - .github/workflows/release-downloads.yml
+      - scripts/release-downloads*.mjs
+  release:
+    types: [published]
+  schedule:
+    - cron: "23 */6 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || 'master' }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.19.0
+      - run: node --test scripts/release-downloads.test.mjs
+
+  publish:
+    needs: test
+    if: >-
+      github.repository == 'mnemon-dev/mnemon' &&
+      github.event_name != 'pull_request' &&
+      (github.event_name != 'workflow_dispatch' || github.ref == 'refs/heads/master')
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    concurrency:
+      group: release-downloads-badge
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: master
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.19.0
+      - name: Count package downloads across all release pages
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BADGE_REPOSITORY: ${{ github.repository }}
+        run: node scripts/release-downloads.mjs "$BADGE_REPOSITORY" "$RUNNER_TEMP/release-downloads.json"
+      - name: Publish badge data
+        run: |
+          git fetch origin badges:refs/remotes/origin/badges
+          git worktree add --detach "$RUNNER_TEMP/mnemon-badges" origin/badges
+          cp "$RUNNER_TEMP/release-downloads.json" "$RUNNER_TEMP/mnemon-badges/release-downloads.json"
+          cd "$RUNNER_TEMP/mnemon-badges"
+          git add release-downloads.json
+          if git diff --cached --quiet -- release-downloads.json; then
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git commit -m 'docs: refresh release package download count'
+          git push origin HEAD:refs/heads/badges
